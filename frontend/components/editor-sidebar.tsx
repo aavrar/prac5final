@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Lightbulb, BookOpen, MessageSquare, MoreVertical } from "lucide-react"
 import { useState, useEffect } from "react"
 import { MOCK_USER_TENSOR } from "@/lib/mockData"
@@ -13,6 +14,10 @@ interface EditorSidebarProps {
 export function EditorSidebar({ content = "" }: EditorSidebarProps) {
   const [relatedIdeas, setRelatedIdeas] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiModalTitle, setAiModalTitle] = useState("")
+  const [aiModalContent, setAiModalContent] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
 
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
   const charCount = content.length
@@ -45,19 +50,113 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
   }
 
   const handleGetSuggestions = async () => {
-    alert('Generating suggestions based on your current writing...')
+    if (content.length < 100) {
+      setAiModalTitle('Not Enough Content')
+      setAiModalContent('Write at least 100 characters to get suggestions!')
+      setAiModalOpen(true)
+      return
+    }
+
+    setAiLoading(true)
+    setAiModalTitle('AI Suggestions')
+    setAiModalContent('Generating suggestions...')
+    setAiModalOpen(true)
+
+    try {
+      const response = await fetch('/api/analyze-writing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tensor: MOCK_USER_TENSOR,
+          content,
+          type: 'suggestions'
+        })
+      })
+
+      const data = await response.json()
+      if (data.suggestions) {
+        const suggestionText = data.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n\n')
+        setAiModalContent(suggestionText)
+      }
+    } catch (error) {
+      setAiModalContent('Error generating suggestions. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
-  const handleAskFeedback = () => {
-    alert('This would open a feedback dialog with AI analysis')
+  const handleAskFeedback = async () => {
+    if (content.length < 100) {
+      setAiModalTitle('Not Enough Content')
+      setAiModalContent('Write at least 100 characters to get feedback!')
+      setAiModalOpen(true)
+      return
+    }
+
+    setAiLoading(true)
+    setAiModalTitle('Writing Feedback')
+    setAiModalContent('Analyzing your writing...')
+    setAiModalOpen(true)
+
+    try {
+      const response = await fetch('/api/analyze-writing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tensor: MOCK_USER_TENSOR,
+          content,
+          type: 'feedback'
+        })
+      })
+
+      const data = await response.json()
+      if (data.result) {
+        setAiModalContent(data.result)
+      }
+    } catch (error) {
+      setAiModalContent('Error generating feedback. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
-  const handleViewOutline = () => {
-    alert('This would show an AI-generated outline of your story')
+  const handleViewOutline = async () => {
+    if (content.length < 100) {
+      setAiModalTitle('Not Enough Content')
+      setAiModalContent('Write at least 100 characters to view outline!')
+      setAiModalOpen(true)
+      return
+    }
+
+    setAiLoading(true)
+    setAiModalTitle('Story Outline')
+    setAiModalContent('Generating outline...')
+    setAiModalOpen(true)
+
+    try {
+      const response = await fetch('/api/analyze-writing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tensor: MOCK_USER_TENSOR,
+          content,
+          type: 'outline'
+        })
+      })
+
+      const data = await response.json()
+      if (data.result) {
+        setAiModalContent(data.result)
+      }
+    } catch (error) {
+      setAiModalContent('Error generating outline. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   return (
-    <div className="h-full border-l border-border bg-muted/20 p-6 overflow-y-auto">
+    <div className="border-l border-border bg-muted/20 p-6">
       <div className="space-y-6">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Story details</h2>
@@ -140,6 +239,22 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
           More options
         </Button>
       </div>
+
+      <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{aiModalTitle}</DialogTitle>
+            <DialogDescription>
+              {aiLoading ? 'Please wait while we analyze your writing...' : 'AI-powered analysis of your writing'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="text-sm leading-relaxed whitespace-pre-wrap">
+              {aiModalContent}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

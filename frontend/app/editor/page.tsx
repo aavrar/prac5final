@@ -16,12 +16,23 @@ export default function EditorPage() {
   const [content, setContent] = useState(initialContent)
   const [showSidebar, setShowSidebar] = useState(true)
 
+  const handleFormat = (type: 'bold' | 'italic' | 'quote' | 'list') => {
+    if ((window as any).formatEditorText) {
+      (window as any).formatEditorText(type)
+    }
+  }
+
+  const handleSave = () => {
+    localStorage.setItem('editor_content', content)
+    alert('Story saved!')
+  }
+
   return (
     <>
       <Navigation />
-      <div className="min-h-screen flex flex-col md:pl-32">
+      <div className="h-screen flex flex-col md:pl-32 overflow-hidden">
         {/* Header */}
-        <header className="border-b border-border bg-card/50 backdrop-blur-sm p-4">
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm p-4 flex-shrink-0">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex-1">
               <input
@@ -48,16 +59,22 @@ export default function EditorPage() {
         </header>
 
         {/* Toolbar */}
-        <EditorToolbar />
+        <div className="flex-shrink-0">
+          <EditorToolbar onFormat={handleFormat} onSave={handleSave} />
+        </div>
 
         {/* Editor Layout */}
-        <div className="flex-1 flex overflow-hidden">
-          <div className={showSidebar ? "flex-1" : "w-full"}>
-            <GhostTextEditor initialContent={content} onContentChange={setContent} />
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <div className={showSidebar ? "flex-1 overflow-y-auto" : "w-full overflow-y-auto"}>
+            <GhostTextEditor
+              initialContent={content}
+              onContentChange={setContent}
+              onFormatRequest={handleFormat}
+            />
           </div>
 
           {showSidebar && (
-            <div className="w-80 hidden lg:block">
+            <div className="w-80 hidden lg:block flex-shrink-0 overflow-y-auto">
               <EditorSidebar content={content} />
             </div>
           )}

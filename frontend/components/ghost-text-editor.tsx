@@ -10,14 +10,62 @@ import { Check, X, Sparkles } from "lucide-react"
 interface GhostTextEditorProps {
   initialContent?: string
   onContentChange?: (content: string) => void
+  onFormatRequest?: (type: 'bold' | 'italic' | 'quote' | 'list') => void
 }
 
-export function GhostTextEditor({ initialContent = "", onContentChange }: GhostTextEditorProps) {
+export function GhostTextEditor({ initialContent = "", onContentChange, onFormatRequest }: GhostTextEditorProps) {
   const [content, setContent] = useState(initialContent)
   const [ghostText, setGhostText] = useState("")
   const [showGhost, setShowGhost] = useState(false)
   const [cursorPosition, setCursorPosition] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Expose formatting function
+  useEffect(() => {
+    if (onFormatRequest) {
+      const handleFormat = (type: 'bold' | 'italic' | 'quote' | 'list') => {
+        const textarea = textareaRef.current
+        if (!textarea) return
+
+        const start = textarea.selectionStart
+        const end = textarea.selectionEnd
+        const selectedText = content.substring(start, end)
+        const beforeText = content.substring(0, start)
+        const afterText = content.substring(end)
+
+        let newText = content
+        let newCursorPos = end
+
+        switch (type) {
+          case 'bold':
+            newText = beforeText + `**${selectedText || 'bold text'}**` + afterText
+            newCursorPos = start + (selectedText ? selectedText.length + 4 : 11)
+            break
+          case 'italic':
+            newText = beforeText + `*${selectedText || 'italic text'}*` + afterText
+            newCursorPos = start + (selectedText ? selectedText.length + 2 : 13)
+            break
+          case 'quote':
+            newText = beforeText + `> ${selectedText || 'quote'}` + afterText
+            newCursorPos = start + (selectedText ? selectedText.length + 2 : 8)
+            break
+          case 'list':
+            newText = beforeText + `- ${selectedText || 'list item'}` + afterText
+            newCursorPos = start + (selectedText ? selectedText.length + 2 : 12)
+            break
+        }
+
+        setContent(newText)
+        setTimeout(() => {
+          textarea.focus()
+          textarea.setSelectionRange(newCursorPos, newCursorPos)
+        }, 0)
+      }
+
+      // Store the handler
+      (window as any).formatEditorText = handleFormat
+    }
+  }, [content, onFormatRequest])
 
   useEffect(() => {
     onContentChange?.(content)
@@ -76,13 +124,13 @@ export function GhostTextEditor({ initialContent = "", onContentChange }: GhostT
   }
 
   return (
-    <div className="relative h-full">
+    <div className="relative w-full">
       <Textarea
         ref={textareaRef}
         value={content}
         onChange={handleTextChange}
         placeholder="Begin writing your story..."
-        className="h-full min-h-[500px] resize-none border-0 focus-visible:ring-0 text-base leading-relaxed font-serif p-8"
+        className="w-full min-h-[calc(100vh-200px)] resize-none border-0 focus-visible:ring-0 text-base leading-relaxed font-serif p-8"
       />
 
       {showGhost && (

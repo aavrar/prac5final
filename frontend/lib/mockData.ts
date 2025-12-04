@@ -1,6 +1,6 @@
 import { UserTensor } from './types';
 
-export const MOCK_USER_TENSOR: UserTensor = {
+const DEFAULT_TENSOR: UserTensor = {
     user_id: "user_123_quantum",
     timestamp: new Date().toISOString(),
     cultural_coordinates: {
@@ -68,3 +68,35 @@ export const MOCK_USER_TENSOR: UserTensor = {
         recent_consumption: ["Ayad Akhtar", "Fatima Farheen Mirza"]
     }
 };
+
+export function getUserTensor(): UserTensor {
+    if (typeof window === 'undefined') {
+        return DEFAULT_TENSOR;
+    }
+
+    try {
+        const stored = localStorage.getItem('user_tensor');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('Error loading tensor from localStorage:', error);
+    }
+
+    return DEFAULT_TENSOR;
+}
+
+export async function loadUserTensorFromDB(userId: string): Promise<UserTensor | null> {
+    try {
+        const response = await fetch(`/api/tensor?user_id=${userId}`);
+        if (response.ok) {
+            const data = await response.json();
+            return data.tensor;
+        }
+    } catch (error) {
+        console.error('Error loading tensor from MongoDB:', error);
+    }
+    return null;
+}
+
+export const MOCK_USER_TENSOR = getUserTensor();

@@ -3,14 +3,52 @@
 import { Navigation } from "@/components/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MOCK_USER_TENSOR } from "@/lib/mockData"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { getUserTensor } from "@/lib/mockData"
 import { Globe, MessageCircle, Book, Pen, Heart, Clock, Edit } from "lucide-react"
+import { useState, useEffect } from "react"
+import type { UserTensor } from "@/lib/types"
 
 export default function ProfilePage() {
-  const tensor = MOCK_USER_TENSOR
+  const [tensor, setTensor] = useState<UserTensor>(getUserTensor())
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState(tensor)
+
+  useEffect(() => {
+    const loadedTensor = getUserTensor()
+    setTensor(loadedTensor)
+    setEditForm(loadedTensor)
+  }, [])
 
   const handleEdit = () => {
-    alert('Tensor editing functionality!\n\nIn a full implementation, you would be able to:\n- Update your cultural background\n- Modify languages and code-switching patterns\n- Edit emotional state and active conflicts\n- Adjust creative voice preferences\n- Update recent consumption and influences\n\nThis data is currently stored in localStorage and used by all AI generation.')
+    setEditForm(tensor)
+    setIsEditOpen(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      setTensor(editForm)
+      localStorage.setItem('user_tensor', JSON.stringify(editForm))
+
+      const response = await fetch('/api/tensor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+
+      if (response.ok) {
+        console.log('Tensor saved to MongoDB successfully')
+      } else {
+        console.error('Failed to save tensor to MongoDB')
+      }
+    } catch (error) {
+      console.error('Error saving tensor:', error)
+    } finally {
+      setIsEditOpen(false)
+    }
   }
 
   return (
@@ -215,6 +253,337 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Your Tensor</DialogTitle>
+            <DialogDescription>
+              Update your profile to shape how AI generates personalized stories for you.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Cultural Coordinates */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                Cultural Coordinates
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="heritage-region">Heritage Region</Label>
+                  <Input
+                    id="heritage-region"
+                    value={(editForm.cultural_coordinates.heritage[0] as any).region || ''}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      cultural_coordinates: {
+                        ...editForm.cultural_coordinates,
+                        heritage: [
+                          { ...(editForm.cultural_coordinates.heritage[0] as any), region: e.target.value },
+                          editForm.cultural_coordinates.heritage[1]
+                        ]
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="primary-language">Primary Language</Label>
+                  <Input
+                    id="primary-language"
+                    value={editForm.cultural_coordinates.linguistics.primary}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      cultural_coordinates: {
+                        ...editForm.cultural_coordinates,
+                        linguistics: {
+                          ...editForm.cultural_coordinates.linguistics,
+                          primary: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="secondary-language">Secondary Language</Label>
+                  <Input
+                    id="secondary-language"
+                    value={editForm.cultural_coordinates.linguistics.secondary}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      cultural_coordinates: {
+                        ...editForm.cultural_coordinates,
+                        linguistics: {
+                          ...editForm.cultural_coordinates.linguistics,
+                          secondary: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tertiary-language">Tertiary Language</Label>
+                  <Input
+                    id="tertiary-language"
+                    value={editForm.cultural_coordinates.linguistics.tertiary || ''}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      cultural_coordinates: {
+                        ...editForm.cultural_coordinates,
+                        linguistics: {
+                          ...editForm.cultural_coordinates.linguistics,
+                          tertiary: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="faith-tradition">Faith Tradition</Label>
+                  <Input
+                    id="faith-tradition"
+                    value={editForm.cultural_coordinates.faith_framework.tradition}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      cultural_coordinates: {
+                        ...editForm.cultural_coordinates,
+                        faith_framework: {
+                          ...editForm.cultural_coordinates.faith_framework,
+                          tradition: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Creative Voice */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Pen className="w-4 h-4" />
+                Creative Voice
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="syntax">Syntax & Rhythm</Label>
+                  <Input
+                    id="syntax"
+                    value={editForm.creative_voice.syntax_rhythm}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      creative_voice: {
+                        ...editForm.creative_voice,
+                        syntax_rhythm: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="diction">Diction</Label>
+                  <Input
+                    id="diction"
+                    value={editForm.creative_voice.diction}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      creative_voice: {
+                        ...editForm.creative_voice,
+                        diction: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="metaphor-density">Metaphor Density</Label>
+                  <Input
+                    id="metaphor-density"
+                    value={editForm.creative_voice.metaphor_density}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      creative_voice: {
+                        ...editForm.creative_voice,
+                        metaphor_density: e.target.value
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="motifs">Recurring Motifs (comma-separated)</Label>
+                  <Input
+                    id="motifs"
+                    value={editForm.creative_voice.recurring_motifs.join(', ')}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      creative_voice: {
+                        ...editForm.creative_voice,
+                        recurring_motifs: e.target.value.split(',').map(m => m.trim())
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Emotional Landscape */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                Emotional Landscape
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dominant-emotion">Dominant Emotion</Label>
+                  <Input
+                    id="dominant-emotion"
+                    value={editForm.emotional_landscape.current_state.dominant_emotion}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      emotional_landscape: {
+                        ...editForm.emotional_landscape,
+                        current_state: {
+                          ...editForm.emotional_landscape.current_state,
+                          dominant_emotion: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="valence">Valence</Label>
+                  <Input
+                    id="valence"
+                    value={editForm.emotional_landscape.current_state.valence}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      emotional_landscape: {
+                        ...editForm.emotional_landscape,
+                        current_state: {
+                          ...editForm.emotional_landscape.current_state,
+                          valence: e.target.value
+                        }
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="processed-themes">Processed Themes (comma-separated)</Label>
+                  <Input
+                    id="processed-themes"
+                    value={editForm.emotional_landscape.processed_themes.join(', ')}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      emotional_landscape: {
+                        ...editForm.emotional_landscape,
+                        processed_themes: e.target.value.split(',').map(t => t.trim())
+                      }
+                    })}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="active-conflicts">Active Conflicts (comma-separated)</Label>
+                  <Textarea
+                    id="active-conflicts"
+                    value={editForm.emotional_landscape.active_conflicts.join(', ')}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      emotional_landscape: {
+                        ...editForm.emotional_landscape,
+                        active_conflicts: e.target.value.split(',').map(c => c.trim())
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Contextual Signals */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Recent Consumption
+              </h3>
+
+              <div>
+                <Label htmlFor="recent-consumption">Recent Media/Books (comma-separated)</Label>
+                <Textarea
+                  id="recent-consumption"
+                  value={editForm.contextual_signals.recent_consumption.join(', ')}
+                  onChange={(e) => setEditForm({
+                    ...editForm,
+                    contextual_signals: {
+                      ...editForm.contextual_signals,
+                      recent_consumption: e.target.value.split(',').map(r => r.trim())
+                    }
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* Intellectual Frameworks */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Book className="w-4 h-4" />
+                Intellectual Frameworks
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="disciplines">Disciplines (comma-separated)</Label>
+                  <Input
+                    id="disciplines"
+                    value={editForm.intellectual_frameworks.disciplines.join(', ')}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      intellectual_frameworks: {
+                        ...editForm.intellectual_frameworks,
+                        disciplines: e.target.value.split(',').map(d => d.trim())
+                      }
+                    })}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="core-concepts">Core Concepts (comma-separated)</Label>
+                  <Input
+                    id="core-concepts"
+                    value={editForm.intellectual_frameworks.core_concepts.join(', ')}
+                    onChange={(e) => setEditForm({
+                      ...editForm,
+                      intellectual_frameworks: {
+                        ...editForm.intellectual_frameworks,
+                        core_concepts: e.target.value.split(',').map(c => c.trim())
+                      }
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
