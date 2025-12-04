@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { UserTensor } from '@/lib/types';
 import { generateText } from '@/lib/gemini';
 
