@@ -1,0 +1,65 @@
+"use client"
+
+import { Home, MessageSquare, Edit, Sparkles, User } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+import { useState } from "react"
+
+const navItems = [
+  { href: "/", icon: Home, label: "Home" },
+  { href: "/conversation", icon: MessageSquare, label: "Conversation" },
+  { href: "/editor", icon: Edit, label: "Editor" },
+  { href: "/profile", icon: User, label: "Your Tensor" },
+  { href: "/archive", icon: Sparkles, label: "Archive" },
+]
+
+export function Navigation() {
+  const pathname = usePathname()
+  const [isHovered, setIsHovered] = useState(false)
+
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 md:left-8 md:top-8 md:bottom-auto md:right-auto z-50"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div
+        className={cn(
+          "bg-card/80 backdrop-blur-lg border border-border shadow-lg transition-all duration-300",
+          isHovered
+            ? "rounded-t-xl md:rounded-xl"
+            : "rounded-t-xl md:rounded-full md:w-4 md:h-4 md:bg-primary md:border-none md:shadow-glow",
+        )}
+      >
+        <div
+          className={cn(
+            "flex md:flex-col gap-1 transition-all duration-300",
+            isHovered ? "p-2" : "p-2 md:p-0 md:opacity-0",
+          )}
+        >
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-all",
+                  "hover:bg-secondary/50",
+                  isActive && "bg-primary text-primary-foreground",
+                  !isHovered && "md:hidden",
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="hidden md:inline text-sm font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </nav>
+  )
+}
