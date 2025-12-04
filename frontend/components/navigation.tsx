@@ -1,16 +1,18 @@
 "use client"
 
-import { Home, MessageSquare, Edit, Sparkles, User } from "lucide-react"
+import { Home, MessageSquare, Edit, Sparkles, Eye } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { TransparencyPanelContent } from "@/components/transparency-panel"
+import { Sheet, SheetTrigger } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/conversation", icon: MessageSquare, label: "Conversation" },
   { href: "/editor", icon: Edit, label: "Editor" },
-  { href: "/profile", icon: User, label: "Your Tensor" },
   { href: "/archive", icon: Sparkles, label: "Archive" },
 ]
 
@@ -58,6 +60,21 @@ export function Navigation() {
               </Link>
             )
           })}
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all hover:bg-secondary/50 cursor-pointer",
+                !isHovered && "md:hidden"
+              )}>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground p-0 h-auto w-auto hover:bg-transparent">
+                  <Eye className="w-5 h-5" />
+                </Button>
+                <span className="hidden md:inline text-sm font-medium">Your Tensor</span>
+              </div>
+            </SheetTrigger>
+            <TransparencyPanelContent />
+          </Sheet>
         </div>
       </div>
     </nav>

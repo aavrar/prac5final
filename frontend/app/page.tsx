@@ -35,9 +35,11 @@ export default function HomePage() {
                     <Link href="/editor">Open editor</Link>
                   </Button>
 
-                  <Button variant="outline" size="lg" className="gap-2 bg-transparent">
-                    <Mic className="w-4 h-4" />
-                    Just listen
+                  <Button asChild variant="outline" size="lg" className="gap-2 bg-transparent">
+                    <Link href="/listen">
+                      <Mic className="w-4 h-4" />
+                      Just listen
+                    </Link>
                   </Button>
                 </div>
               </div>

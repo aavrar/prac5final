@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Crimson_Text } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -45,6 +46,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${_crimson.variable} font-sans antialiased`}>
         {children}
+        <Toaster position="top-right" richColors />
         <Analytics />
       </body>
     </html>

@@ -2,6 +2,7 @@ import { Navigation } from "@/components/navigation"
 import { ConstellationView } from "@/components/constellation-view"
 import { Button } from "@/components/ui/button"
 import { Grid, Network } from "lucide-react"
+import { StoryUploader } from "@/components/story-uploader"
 
 export default function ArchivePage() {
   return (
@@ -16,7 +17,10 @@ export default function ArchivePage() {
               <p className="text-sm text-muted-foreground">Exploring the connections between your work</p>
             </div>
 
+            {/* ... imports */}
+
             <div className="flex gap-2">
+              <StoryUploader />
               <Button variant="outline" size="sm" className="gap-2 bg-transparent">
                 <Network className="w-4 h-4" />
                 Constellation

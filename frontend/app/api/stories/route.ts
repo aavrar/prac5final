@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '@/lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +78,7 @@ export async function PUT(request: NextRequest) {
         if (title !== undefined) updateFields.title = title;
 
         const result = await db.collection('stories').updateOne(
-            { _id: story_id },
+            { _id: new ObjectId(story_id) },
             { $set: updateFields }
         );
 

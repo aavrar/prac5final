@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ConstellationNode } from "@/components/constellation-node"
 import { ConstellationConnection } from "@/components/constellation-connection"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, ExternalLink } from "lucide-react"
+import { X, ExternalLink, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 interface Story {
@@ -18,74 +18,75 @@ interface Story {
   wordCount: number
 }
 
-const stories: Story[] = [
-  {
-    id: "1",
-    title: "Echoes in the Garden",
-    theme: "Memory & Loss",
-    position: { x: 50, y: 40 },
-    size: "large",
-    excerpt: "The morning dew clung to the rose petals like memories...",
-    wordCount: 1847,
-  },
-  {
-    id: "2",
-    title: "Midnight Conversations",
-    theme: "Connection",
-    position: { x: 25, y: 30 },
-    size: "medium",
-    excerpt: "We spoke in whispers, as if the darkness itself was listening...",
-    wordCount: 892,
-  },
-  {
-    id: "3",
-    title: "Letters to Tomorrow",
-    theme: "Hope & Time",
-    position: { x: 70, y: 25 },
-    size: "medium",
-    excerpt: "Dear future self, I hope you remember this feeling...",
-    wordCount: 2341,
-  },
-  {
-    id: "4",
-    title: "The Weight of Silence",
-    theme: "Grief",
-    position: { x: 35, y: 60 },
-    size: "small",
-    excerpt: "Some things are too heavy for words...",
-    wordCount: 456,
-  },
-  {
-    id: "5",
-    title: "Fragments of Light",
-    theme: "Beauty",
-    position: { x: 65, y: 65 },
-    size: "small",
-    excerpt: "She collected moments like pressed flowers...",
-    wordCount: 734,
-  },
-  {
-    id: "6",
-    title: "The Space Between",
-    theme: "Identity",
-    position: { x: 50, y: 75 },
-    size: "medium",
-    excerpt: "Who are we in the quiet moments?...",
-    wordCount: 1203,
-  },
-]
-
-const connections = [
-  { from: { x: 50, y: 40 }, to: { x: 25, y: 30 }, strength: "strong" as const },
-  { from: { x: 50, y: 40 }, to: { x: 35, y: 60 }, strength: "strong" as const },
-  { from: { x: 70, y: 25 }, to: { x: 50, y: 40 }, strength: "medium" as const },
-  { from: { x: 35, y: 60 }, to: { x: 50, y: 75 }, strength: "medium" as const },
-  { from: { x: 65, y: 65 }, to: { x: 50, y: 40 }, strength: "weak" as const },
-  { from: { x: 25, y: 30 }, to: { x: 35, y: 60 }, strength: "weak" as const },
-]
+interface Connection {
+  from: { x: number; y: number }
+  to: { x: number; y: number }
+  strength: "strong" | "medium" | "weak"
+}
 
 export function ConstellationView() {
   const [selectedStory, setSelectedStory] = useState<Story | null>(null)
+  const [stories, setStories] = useState<Story[]>([])
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStories() {
+      try {
+        const response = await fetch('/api/stories?user_id=user_123_quantum')
+        if (response.ok) {
+          const data = await response.json()
+
+          // Map API data to visualization format
+          const mappedStories: Story[] = data.stories.map((s: any, index: number) => {
+            // Generate deterministic random position based on index
+            const x = 20 + (index * 15) % 60 + (Math.random() * 10 - 5)
+            const y = 20 + (index * 23) % 60 + (Math.random() * 10 - 5)
+
+            return {
+              id: s._id,
+              title: s.title,
+              theme: s.analysis?.themes?.[0] || "Uncategorized",
+              position: { x, y },
+              size: s.content.length > 2000 ? "large" : s.content.length > 1000 ? "medium" : "small",
+              excerpt: s.content.substring(0, 100) + "...",
+              wordCount: s.content.split(/\s+/).length
+            }
+          })
+
+          setStories(mappedStories)
+
+          // Generate connections based on shared themes or random for visual effect
+          const newConnections: Connection[] = []
+          mappedStories.forEach((s1, i) => {
+            mappedStories.forEach((s2, j) => {
+              if (i < j) {
+                // Connect if they share a theme or just randomly for now to show the constellation
+                if (s1.theme === s2.theme || Math.random() > 0.7) {
+                  newConnections.push({
+                    from: s1.position,
+                    to: s2.position,
+                    strength: s1.theme === s2.theme ? "strong" : "weak"
+                  })
+                }
+              }
+            })
+          })
+          setConnections(newConnections)
+        }
+      } catch (error) {
+        console.error("Failed to fetch stories", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStories()
+  }, [])
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-[600px]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
+  }
 
   return (
     <div className="relative w-full h-full min-h-[600px]">

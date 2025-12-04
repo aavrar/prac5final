@@ -58,7 +58,7 @@ const DEFAULT_TENSOR: UserTensor = {
             arousal: "Low-Medium",
             dominant_emotion: "Yearning/Ambition"
         },
-        processed_themes: ["Grief", "Sobriety", "Displacement"],
+        processed_themes: ["Grief", "Displacement"],
         active_conflicts: ["PhD Application Stress", "Artistic Validation"]
     },
     contextual_signals: {

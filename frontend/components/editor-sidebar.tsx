@@ -3,9 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Lightbulb, BookOpen, MessageSquare, MoreVertical } from "lucide-react"
 import { useState, useEffect } from "react"
 import { MOCK_USER_TENSOR } from "@/lib/mockData"
+import { toast } from "sonner"
+import { MoodDial } from "@/components/mood-dial"
 
 interface EditorSidebarProps {
   content?: string
@@ -18,6 +21,7 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
   const [aiModalTitle, setAiModalTitle] = useState("")
   const [aiModalContent, setAiModalContent] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
+  const [moodValue, setMoodValue] = useState(50)
 
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
   const charCount = content.length
@@ -156,88 +160,51 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
   }
 
   return (
-    <div className="border-l border-border bg-muted/20 p-6">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Story details</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Words</span>
-              <span className="font-medium">{wordCount.toLocaleString()}</span>
+    <>
+      <div className="border-l border-border bg-muted/20 p-6 flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-serif">AI</span>
+              </div>
+              <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
+                <p>I'm reading along with you. The rhythm in this second paragraph feels a bit rushed compared to the opening.</p>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Characters</span>
-              <span className="font-medium">{charCount.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Reading time</span>
-              <span className="font-medium">{readingTime} min</span>
+
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-serif">AI</span>
+              </div>
+              <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
+                <p>Want to explore that "garden found its own rhythm" idea more? It feels like a metaphor for her grief.</p>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="outline" className="text-xs h-7">Expand metaphor</Button>
+                  <Button size="sm" variant="outline" className="text-xs h-7">Keep moving</Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-border pt-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Quick actions</h2>
-          <div className="space-y-2">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-sm"
-              onClick={handleAskFeedback}
-            >
+        <div className="mt-6 space-y-6 border-t border-border pt-6">
+          <div>
+            <h2 className="text-xs font-medium text-muted-foreground mb-4 uppercase tracking-widest">Tone & Energy</h2>
+            <MoodDial value={moodValue} onChange={setMoodValue} />
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Reply to partner..."
+              className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            />
+            <Button size="icon" variant="ghost">
               <MessageSquare className="w-4 h-4" />
-              Ask for feedback
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-sm"
-              onClick={handleGetSuggestions}
-            >
-              <Lightbulb className="w-4 h-4" />
-              Get suggestions
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-sm"
-              onClick={handleViewOutline}
-            >
-              <BookOpen className="w-4 h-4" />
-              View outline
             </Button>
           </div>
         </div>
-
-        <div className="border-t border-border pt-6">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Related ideas</h2>
-          {loading ? (
-            <p className="text-sm text-muted-foreground animate-pulse">Thinking...</p>
-          ) : relatedIdeas.length > 0 ? (
-            <div className="space-y-2">
-              {relatedIdeas.map((idea, index) => (
-                <Card key={index} className="p-3">
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {index === 0 ? 'From your themes' : 'Related concept'}
-                  </p>
-                  <p className="text-sm leading-relaxed">{idea}</p>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-3">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Start writing to discover related ideas...
-              </p>
-            </Card>
-          )}
-        </div>
-
-        <Button
-          variant="outline"
-          className="w-full gap-2 bg-transparent"
-          onClick={() => alert('More options coming soon!')}
-        >
-          <MoreVertical className="w-4 h-4" />
-          More options
-        </Button>
       </div>
 
       <Dialog open={aiModalOpen} onOpenChange={setAiModalOpen}>
@@ -249,12 +216,22 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="text-sm leading-relaxed whitespace-pre-wrap">
-              {aiModalContent}
-            </div>
+            {aiLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ) : (
+              <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                {aiModalContent}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
