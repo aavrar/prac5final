@@ -1,29 +1,50 @@
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
-import { UserTensor } from '@/lib/types';
 import { generateText } from '@/lib/gemini';
+import { getUserTensor } from '@/lib/db/tensor';
 
 export async function POST(request: Request) {
     try {
-        const { tensor, currentText }: { tensor: UserTensor; currentText: string } = await request.json();
+        const requestBody = await request.json();
+        const { userId, currentText, ambientContext } = requestBody;
 
-        const lastSentence = currentText.slice(-200);
+        if (!userId) {
+            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+        }
 
-        const prompt = `You are providing a brief writing suggestion for a user mid-composition.
+        const tensor = await getUserTensor(userId);
+        const lastSentence = currentText.slice(-3000); // Increased context window to 3000 chars
 
-CURRENT TEXT (last portion):
-"${lastSentence}"
+        const prompt = `COMPLETE THE FOLLOWING TEXT.
+        
+        CONTEXT (The story so far):
+        "...${lastSentence}"
 
-USER VOICE PROFILE:
-- Syntax: ${tensor.creative_voice.syntax_rhythm}
-- Diction: ${tensor.creative_voice.diction}
-- Recurring Motifs: ${tensor.creative_voice.recurring_motifs.join(', ')}
-- Languages: ${tensor.cultural_coordinates.linguistics.primary}, ${tensor.cultural_coordinates.linguistics.secondary}
-- Emotional State: ${tensor.emotional_landscape.current_state.dominant_emotion}
+        STYLE INSTRUCTIONS:
+        - Syntax Rhythm: ${tensor.creative_voice?.syntax_rhythm || 'Standard'}
+        - Diction: ${tensor.creative_voice?.diction || 'Neutral'}
+        - Recurring Motifs: ${tensor.creative_voice?.recurring_motifs?.join(', ') || 'None'}
+        - Primary Language: ${tensor.cultural_coordinates?.linguistics?.primary || 'English'}
+        - Secondary Language: ${tensor.cultural_coordinates?.linguistics?.secondary || 'None'}
+        - Code-Switching Pattern: ${JSON.stringify(tensor.cultural_coordinates?.linguistics?.code_switching_patterns || {})}
+        - Current Emotional State: ${tensor.emotional_landscape?.current_state?.dominant_emotion || 'Neutral'} (Valence: ${tensor.emotional_landscape?.current_state?.valence || 'Neutral'})
 
-Generate a single sentence (15-25 words) that could naturally follow their current text. Match their voice exactly. If appropriate for emotional precision, include a ${tensor.cultural_coordinates.linguistics.secondary} word in italics.
+        AMBIENT CONTEXT (User's Environment):
+        - Time of Day: ${requestBody.ambientContext?.timeOfDay || 'Unknown'}
+        - Local Time: ${requestBody.ambientContext?.localTime || 'Unknown'}
 
-Output ONLY the suggestion sentence, nothing else.`;
+        TASK:
+        Write the next sentence of the story. 
+        
+        CONSTRAINTS:
+        1. **NO NEW CHARACTERS**: Use only the characters already present in the context. Do not invent names like "Professor Armitage".
+        2. **NO META-COMMENTARY**: Just write the story.
+        3. **Mimic the Voice**: Use the syntax rhythm and diction described above.
+        4. **Ambient Influence**: If it is "Late Night", lean towards more introspective, dreamlike, or quiet syntax. If "Morning", be more crisp and alert.
+        4. **Code-Switching**: If the emotional context matches the "Code-Switching Pattern" (e.g., high emotion -> Secondary Language), explicitly use a word or phrase in ${tensor.cultural_coordinates?.linguistics?.secondary || 'the secondary language'}. Wrap non-English words in italics.
+
+        OUTPUT:
+        [The next sentence only]`;
 
         const suggestion = await generateText(prompt);
 

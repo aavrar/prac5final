@@ -185,7 +185,11 @@ function EditorContent() {
 
         {/* Toolbar */}
         <div className="flex-shrink-0 print:hidden">
-          <EditorToolbar onFormat={handleFormat} onSave={handleAction} />
+          <EditorToolbar
+            onFormat={handleFormat}
+            onSave={handleAction}
+            onCheckVoice={() => editorRef.current?.checkVoice()}
+          />
         </div>
 
         {/* Editor Layout */}
@@ -199,7 +203,7 @@ function EditorContent() {
           </div>
 
           {showSidebar && (
-            <div className="w-80 hidden lg:block border-l border-border bg-muted/20 h-full overflow-y-auto">
+            <div className="w-96 hidden lg:block border-l border-border bg-muted/20 h-full overflow-y-auto">
               <EditorSidebar content={content} />
             </div>
           )}

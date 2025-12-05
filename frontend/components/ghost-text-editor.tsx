@@ -13,11 +13,19 @@ interface GhostTextEditorProps {
 
 export interface GhostTextEditorHandle {
   formatText: (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => void
+  checkVoice: () => void
 }
 
-export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditorProps>(({ initialContent = "", onContentChange }, ref) => {
+interface GhostTextEditorProps {
+  initialContent?: string
+  onContentChange?: (content: string) => void
+  userId?: string
+}
+
+export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditorProps>(({ initialContent = "", onContentChange, userId = "user_123_quantum" }, ref) => {
   const [ghostText, setGhostText] = useState("")
   const [showGhost, setShowGhost] = useState(false)
+  const [voiceFeedback, setVoiceFeedback] = useState<{ match_score: number, feedback: string, suggestion: string } | null>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const isTypingRef = useRef(false)
 
@@ -30,7 +38,7 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
     }
   }, [initialContent])
 
-  // Expose formatting function via ref
+  // Expose functions via ref
   useImperativeHandle(ref, () => ({
     formatText: (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => {
       if (!editorRef.current) return
@@ -57,6 +65,26 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
           break
       }
       handleInput()
+    },
+    checkVoice: async () => {
+      if (!editorRef.current) return
+      const text = editorRef.current.innerText
+      if (text.length < 50) return
+
+      try {
+        const response = await fetch('/api/analyze-voice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, text })
+        })
+        const data = await response.json()
+        setVoiceFeedback(data)
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => setVoiceFeedback(null), 10000)
+      } catch (error) {
+        console.error("Voice check failed", error)
+      }
     }
   }))
 
@@ -74,19 +102,30 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
     const timeout = setTimeout(async () => {
       if (editorRef.current && editorRef.current.innerText.length > 50 && !showGhost) {
         try {
-          const { MOCK_USER_TENSOR } = await import('@/lib/mockData')
+          // Calculate ambient context (Time of Day)
+          const hour = new Date().getHours()
+          let timeOfDay = "Daytime"
+          if (hour >= 5 && hour < 12) timeOfDay = "Morning"
+          else if (hour >= 12 && hour < 17) timeOfDay = "Afternoon"
+          else if (hour >= 17 && hour < 22) timeOfDay = "Evening"
+          else timeOfDay = "Late Night"
 
           const response = await fetch('/api/generate-suggestion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              tensor: MOCK_USER_TENSOR,
-              currentText: editorRef.current.innerText
+              userId,
+              currentText: editorRef.current.innerText,
+              ambientContext: {
+                timeOfDay,
+                localTime: new Date().toLocaleTimeString()
+              }
             })
           })
 
           const data = await response.json()
           if (data.suggestion) {
+            console.log("Ghost Text received:", data.suggestion)
             setGhostText(data.suggestion)
             setShowGhost(true)
           }
@@ -97,7 +136,7 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
     }, 3000)
 
     return () => clearTimeout(timeout)
-  }, [showGhost]) // Removed content dependency to avoid loop, relies on timeout
+  }, [showGhost, userId])
 
   const handleAcceptGhost = () => {
     if (editorRef.current) {
@@ -123,29 +162,74 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex flex-col">
       <div
         ref={editorRef}
         contentEditable
         onInput={handleInput}
-        className="w-full min-h-[calc(100vh-200px)] outline-none text-base leading-relaxed font-serif p-8 whitespace-pre-wrap empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
+        className="w-full flex-1 outline-none text-base leading-relaxed font-serif p-8 whitespace-pre-wrap empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground overflow-y-auto"
         data-placeholder="Begin writing your story..."
         suppressContentEditableWarning
       />
 
-      {showGhost && (
-        <div className="absolute bottom-8 left-8 right-8 animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-none">
-          <div className="bg-[var(--color-ghost-text)]/10 border border-[var(--color-ghost-text)]/30 rounded-lg p-4 backdrop-blur-sm pointer-events-auto inline-flex items-center gap-3 max-w-2xl">
-            <Sparkles className="w-4 h-4 text-[var(--color-ghost-text)] flex-shrink-0" />
-            <p className="text-sm text-[var(--color-ghost-text)] italic leading-relaxed line-clamp-2">{ghostText}</p>
-            <div className="flex gap-2 flex-shrink-0 ml-auto">
-              <Button size="sm" variant="ghost" onClick={handleAcceptGhost} className="h-7 px-2 hover:bg-[var(--color-ghost-text)]/20">
-                <Check className="w-3 h-3" />
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleRejectGhost} className="h-7 px-2 hover:bg-[var(--color-ghost-text)]/20">
-                <X className="w-3 h-3" />
-              </Button>
+      {/* Dedicated Suggestion Area */}
+      <div className="h-24 border-t border-border bg-muted/10 flex-shrink-0 p-4 flex items-center justify-center">
+        {showGhost ? (
+          <div className="w-full max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-card border border-border rounded-lg p-3 shadow-sm flex items-center gap-4">
+              <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
+              <p className="text-sm text-foreground italic leading-relaxed flex-1 font-serif">
+                {ghostText}
+              </p>
+              <div className="flex gap-2 flex-shrink-0 border-l border-border pl-3">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleAcceptGhost}
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                  title="Accept (Tab)"
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleRejectGhost}
+                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                  title="Reject (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            Pause typing to see AI suggestions...
+          </p>
+        )}
+      </div>
+
+      {/* Voice Check Feedback (unchanged) */}
+      {voiceFeedback && (
+        <div className="absolute top-4 right-4 w-64 animate-in fade-in slide-in-from-right-2 duration-300 z-50">
+          <div className="bg-card border p-4 rounded-lg shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Voice Check</h4>
+              <span className="text-xs font-mono">{voiceFeedback.match_score}% Match</span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">{voiceFeedback.feedback}</p>
+            <div className="bg-muted/50 p-2 rounded text-xs italic">
+              "{voiceFeedback.suggestion}"
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-2 h-6 text-xs"
+              onClick={() => setVoiceFeedback(null)}
+            >
+              Dismiss
+            </Button>
           </div>
         </div>
       )}

@@ -1,14 +1,15 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Bold, Italic, List, Quote, Undo, Redo, Save, MoreHorizontal, FileDown, FileText } from "lucide-react"
+import { Bold, Italic, List, Quote, Undo, Redo, Save, MoreHorizontal, FileDown, FileText, Mic } from "lucide-react"
 
 interface EditorToolbarProps {
   onFormat?: (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => void
   onSave?: (action: 'save' | 'pdf' | 'txt') => void
+  onCheckVoice?: () => void
 }
 
-export function EditorToolbar({ onFormat, onSave }: EditorToolbarProps) {
+export function EditorToolbar({ onFormat, onSave, onCheckVoice }: EditorToolbarProps) {
   return (
     <div className="border-b border-border bg-card/50 backdrop-blur-sm p-3">
       <div className="flex items-center justify-between">
@@ -42,6 +43,13 @@ export function EditorToolbar({ onFormat, onSave }: EditorToolbarProps) {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onSave?.('txt')} title="Export as Text">
             <FileText className="w-4 h-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-2" />
+
+          <Button variant="ghost" size="sm" onClick={onCheckVoice} title="Check Voice Consistency" className="text-primary hover:text-primary/80">
+            <Mic className="w-4 h-4 mr-2" />
+            <span className="text-xs font-medium">Voice Check</span>
           </Button>
         </div>
 

@@ -26,6 +26,10 @@ export async function GET(request: NextRequest) {
     }
 }
 
+import { generateEmbedding } from '@/lib/db/vector';
+
+// ... (imports)
+
 export async function POST(request: NextRequest) {
     try {
         const { user_id, title, content, premise, scene, type } = await request.json();
@@ -36,10 +40,17 @@ export async function POST(request: NextRequest) {
 
         const db = await getDatabase();
 
+        // Generate embedding for content
+        let embedding: number[] = [];
+        if (content && content.length > 50) {
+            embedding = await generateEmbedding(content);
+        }
+
         const story = {
             user_id,
             title,
             content: content || '',
+            embedding, // Store embedding
             premise: premise || null,
             scene: scene || null,
             type: type || 'draft',
@@ -74,7 +85,13 @@ export async function PUT(request: NextRequest) {
             updated_at: new Date().toISOString()
         };
 
-        if (content !== undefined) updateFields.content = content;
+        if (content !== undefined) {
+            updateFields.content = content;
+            // Regenerate embedding if content changed significantly
+            if (content.length > 50) {
+                updateFields.embedding = await generateEmbedding(content);
+            }
+        }
         if (title !== undefined) updateFields.title = title;
 
         const result = await db.collection('stories').updateOne(

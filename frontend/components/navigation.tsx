@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, MessageSquare, Edit, Sparkles, Eye, Brain } from "lucide-react"
+import { Home, MessageSquare, Edit, Sparkles, Eye, Brain, Wand2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -8,12 +8,12 @@ import { useState } from "react"
 import { TransparencyPanelContent } from "@/components/transparency-panel"
 import { Sheet, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/conversation", icon: MessageSquare, label: "Conversation" },
   { href: "/editor", icon: Edit, label: "Editor" },
   { href: "/archive", icon: Sparkles, label: "Archive" },
+  { href: "/mirror", icon: Wand2, label: "Mirror" },
   { href: "/calibration", icon: Brain, label: "Calibration" },
 ]
 

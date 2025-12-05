@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { X, ExternalLink, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
+import { cosineSimilarity } from "@/lib/utils/math"
 
 interface Story {
   id: string
@@ -63,18 +64,39 @@ export function ConstellationView() {
 
           setStories(mappedStories)
 
-          // Generate connections based on shared themes or random for visual effect
+          // ...
+
+          // Generate connections based on semantic similarity (embeddings)
           const newConnections: Connection[] = []
           mappedStories.forEach((s1, i) => {
             mappedStories.forEach((s2, j) => {
               if (i < j) {
-                // Connect if they share a theme or just randomly for now to show the constellation
-                if (s1.theme === s2.theme || Math.random() > 0.7) {
-                  newConnections.push({
-                    from: s1.position,
-                    to: s2.position,
-                    strength: s1.theme === s2.theme ? "strong" : "weak"
-                  })
+                // Calculate similarity if embeddings exist
+                // Note: We need to access the raw 'embedding' from the API data, 
+                // but we didn't map it to the Story interface yet. 
+                // Let's assume we can access it from the original 'data.stories' array using the index,
+                // provided the order hasn't changed (which it hasn't).
+                const vecA = data.stories[i].embedding
+                const vecB = data.stories[j].embedding
+
+                if (vecA && vecB) {
+                  const similarity = cosineSimilarity(vecA, vecB)
+                  if (similarity > 0.75) { // Threshold for connection
+                    newConnections.push({
+                      from: s1.position,
+                      to: s2.position,
+                      strength: similarity > 0.85 ? "strong" : similarity > 0.8 ? "medium" : "weak"
+                    })
+                  }
+                } else {
+                  // Fallback to theme matching if no embeddings
+                  if (s1.theme === s2.theme && s1.theme !== "Uncategorized") {
+                    newConnections.push({
+                      from: s1.position,
+                      to: s2.position,
+                      strength: "weak"
+                    })
+                  }
                 }
               }
             })

@@ -22,6 +22,43 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
   const [aiModalContent, setAiModalContent] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [moodValue, setMoodValue] = useState(50)
+  const [messages, setMessages] = useState<{ role: 'ai' | 'user', content: string, actions?: string[] }[]>([
+    { role: 'ai', content: "I'm reading along with you. I'm ready to help with plot, character, or tone whenever you need me." }
+  ])
+  const [inputValue, setInputValue] = useState("")
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return
+
+    const newMessages = [...messages, { role: 'user', content: inputValue }]
+    setMessages(newMessages as any)
+    setInputValue("")
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/chat-with-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: "user_123_quantum",
+          message: inputValue,
+          currentText: content, // Pass the story content
+          history: newMessages.map(m => ({ role: m.role === 'ai' ? 'model' : 'user', parts: [{ text: m.content }] }))
+        })
+      })
+      const data = await response.json()
+      setMessages([...newMessages, { role: 'ai', content: data.reply }] as any)
+    } catch (error) {
+      console.error("Failed to send message", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleActionClick = (action: string) => {
+    setInputValue(action)
+    // handleSendMessage() // Optional: auto-send
+  }
 
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
   const charCount = content.length
@@ -164,27 +201,41 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
       <div className="border-l border-border bg-muted/20 p-6 flex flex-col h-full">
         <div className="flex-1 overflow-y-auto space-y-6">
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-serif">AI</span>
-              </div>
-              <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
-                <p>I'm reading along with you. The rhythm in this second paragraph feels a bit rushed compared to the opening.</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-serif">AI</span>
-              </div>
-              <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
-                <p>Want to explore that "garden found its own rhythm" idea more? It feels like a metaphor for her grief.</p>
-                <div className="mt-3 flex gap-2">
-                  <Button size="sm" variant="outline" className="text-xs h-7">Expand metaphor</Button>
-                  <Button size="sm" variant="outline" className="text-xs h-7">Keep moving</Button>
+            {messages.map((msg, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'ai' ? 'bg-[var(--accent)]/20' : 'bg-primary/20'}`}>
+                  <span className="text-xs font-serif">{msg.role === 'ai' ? 'AI' : 'You'}</span>
+                </div>
+                <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
+                  <p>{msg.content}</p>
+                  {msg.actions && (
+                    <div className="mt-3 flex gap-2">
+                      {msg.actions.map((action, j) => (
+                        <Button
+                          key={j}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7"
+                          onClick={() => handleActionClick(action)}
+                        >
+                          {action}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            ))}
+            {loading && (
+              <div className="flex items-start gap-3 opacity-50">
+                <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-serif">AI</span>
+                </div>
+                <div className="bg-card p-3 rounded-lg rounded-tl-none border border-border text-sm leading-relaxed">
+                  <p>Thinking...</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -197,10 +248,13 @@ export function EditorSidebar({ content = "" }: EditorSidebarProps) {
           <div className="flex gap-2">
             <input
               type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Reply to partner..."
               className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             />
-            <Button size="icon" variant="ghost">
+            <Button size="icon" variant="ghost" onClick={handleSendMessage} disabled={loading || !inputValue.trim()}>
               <MessageSquare className="w-4 h-4" />
             </Button>
           </div>
