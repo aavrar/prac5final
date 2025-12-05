@@ -19,7 +19,7 @@ export async function POST(request: Request) {
         - Recurring Motifs: ${tensor.creative_voice?.recurring_motifs?.join(', ') || 'None'}
         - Emotional Landscape: ${tensor.emotional_landscape?.current_state?.dominant_emotion || 'Neutral'}
         - Syntax Rhythm: ${tensor.creative_voice?.syntax_rhythm || 'Standard'}
-        - Cultural Markers: ${tensor.cultural_coordinates?.traditions?.join(', ') || 'None'}
+        - Cultural Markers: ${tensor.cultural_coordinates?.faith_framework?.tradition || 'None'}, ${tensor.cultural_coordinates?.heritage?.map((h: any) => h.region || h.context).join(', ') || 'None'}
 
         TASK:
         Invent a story that this user *would* write, but hasn't yet.
