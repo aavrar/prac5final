@@ -32,7 +32,7 @@ export const GhostTextEditor = forwardRef<GhostTextEditorHandle, GhostTextEditor
 
   // Expose formatting function via ref
   useImperativeHandle(ref, () => ({
-    formatText: (type: 'bold' | 'italic' | 'quote' | 'list') => {
+    formatText: (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => {
       if (!editorRef.current) return
       editorRef.current.focus()
 
