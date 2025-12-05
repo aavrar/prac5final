@@ -5,7 +5,7 @@ import { ConstellationNode } from "@/components/constellation-node"
 import { ConstellationConnection } from "@/components/constellation-connection"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, ExternalLink, Loader2 } from "lucide-react"
+import { X, ExternalLink, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 interface Story {
@@ -16,6 +16,12 @@ interface Story {
   size: "small" | "medium" | "large"
   excerpt: string
   wordCount: number
+  analysis: {
+    themes: string[]
+    emotional_valence: string
+    motifs: string[]
+    cultural_markers: string[]
+  }
 }
 
 interface Connection {
@@ -50,7 +56,8 @@ export function ConstellationView() {
               position: { x, y },
               size: s.content.length > 2000 ? "large" : s.content.length > 1000 ? "medium" : "small",
               excerpt: s.content.substring(0, 100) + "...",
-              wordCount: s.content.split(/\s+/).length
+              wordCount: s.content.split(/\s+/).length,
+              analysis: s.analysis || { themes: [], emotional_valence: "Unknown", motifs: [], cultural_markers: [] }
             }
           })
 
@@ -137,14 +144,66 @@ export function ConstellationView() {
 
             <p className="text-sm leading-relaxed text-muted-foreground mb-4">{selectedStory.excerpt}</p>
 
+            {/* Analysis Details */}
+            <div className="mb-4 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {selectedStory.analysis.emotional_valence && (
+                  <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                    {selectedStory.analysis.emotional_valence}
+                  </span>
+                )}
+                {selectedStory.analysis.themes?.slice(0, 3).map((theme, i) => (
+                  <span key={i} className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full">
+                    {theme}
+                  </span>
+                ))}
+              </div>
+              {selectedStory.analysis.motifs?.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Motifs:</span> {selectedStory.analysis.motifs.join(", ")}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{selectedStory.wordCount.toLocaleString()} words</span>
-              <Button asChild size="sm" className="gap-2">
-                <Link href={`/editor?story=${selectedStory.id}`}>
-                  Open story
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={async () => {
+                    if (confirm("Are you sure you want to delete this story?")) {
+                      try {
+                        const res = await fetch(`/api/stories?story_id=${selectedStory.id}`, { method: 'DELETE' })
+                        if (res.ok) {
+                          setStories(prev => prev.filter(s => s.id !== selectedStory.id))
+                          setConnections(prev => prev.filter(c => {
+                            // Re-calculate connections or just refresh, but simple filter for now
+                            // Since connections store positions, it's hard to filter by ID without mapping back
+                            // So we'll just close the modal and let the user refresh or we can re-fetch
+                            return true
+                          }))
+                          setSelectedStory(null)
+                          // Ideally re-fetch to clean up connections
+                          window.location.reload()
+                        }
+                      } catch (err) {
+                        console.error("Failed to delete", err)
+                      }
+                    }
+                  }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </Button>
+                <Button asChild size="sm" className="gap-2">
+                  <Link href={`/editor?story=${selectedStory.id}`}>
+                    Open story
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </Card>
         </div>

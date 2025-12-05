@@ -7,35 +7,71 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(request: NextRequest) {
     try {
-        const { user_id, title, content } = await request.json();
+
+        const { user_id, title, content, analysis: providedAnalysis } = await request.json();
 
         if (!content || !user_id || !title) {
             return NextResponse.json({ error: 'Content, title, and user_id are required' }, { status: 400 });
         }
 
         const text = content;
-        // const title = file.name.replace(/\.[^/.]+$/, ""); // No longer needed as title is passed explicitly
+        let analysis = providedAnalysis || {};
 
-        // 1. Analyze with Gemini
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = `Analyze this story for "Quantum Storytelling" metadata. 
-        Return a JSON object with:
-        - themes: string[] (major themes)
-        - emotional_valence: string (e.g., "Melancholic", "Hopeful")
-        - motifs: string[] (recurring imagery)
-        - cultural_markers: string[] (specific cultural references)
-        
-        Story:
-        ${text.substring(0, 10000)}...`; // Truncate if too long
+        // Only analyze if not provided and not explicitly skipped (empty object passed)
+        // If providedAnalysis is null/undefined, we might want to try analyzing, 
+        // but for this new flow, we prefer the client to handle it. 
+        // We'll keep the fallback logic just in case, but prioritize providedAnalysis.
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let analysis = {};
-        try {
-            const jsonString = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
-            analysis = JSON.parse(jsonString);
-        } catch (e) {
-            console.error("Failed to parse Gemini response", e);
+        if (!providedAnalysis) {
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                // ... (existing analysis logic could remain as a fallback, or we remove it to enforce the new flow)
+                // For now, let's keep a simplified fallback or just default to empty to respect the "continue without analysis"
+                // If the user chose "without analysis", the client should pass an empty object or specific flag.
+                // Let's assume if providedAnalysis is missing, we default to empty to avoid double-cost/latency unless we really want it.
+                // actually, let's keep the fallback for direct API usage, but make it robust.
+
+                const prompt = `Analyze this story...`; // simplified for brevity in this thought process
+                // ...
+            } catch (e) {
+                // ...
+            }
+        }
+
+        // REPLACING THE BLOCK WITH:
+
+        if (!providedAnalysis) {
+            // Fallback: Try to analyze if not provided (e.g. direct API call)
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const prompt = `Analyze this story for "Quantum Storytelling" metadata. 
+                Return a JSON object with:
+                - themes: string[]
+                - emotional_valence: string
+                - motifs: string[]
+                - cultural_markers: string[]
+                
+                Story:
+                ${text.substring(0, 5000)}...`;
+
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                const jsonString = response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+                analysis = JSON.parse(jsonString);
+            } catch (e) {
+                console.log("Backend analysis fallback failed, using heuristics", e);
+
+                // Heuristic fallback
+                const themes = ["Memory", "Identity", "Time", "Nature", "Technology"];
+                const detectedThemes = themes.filter(t => text.toLowerCase().includes(t.toLowerCase()));
+
+                analysis = {
+                    themes: detectedThemes.length > 0 ? detectedThemes : ["Uncategorized"],
+                    emotional_valence: text.length > 1000 ? "Complex" : "Neutral",
+                    motifs: ["Light", "Shadow", "Water"].filter(m => text.toLowerCase().includes(m.toLowerCase())),
+                    cultural_markers: []
+                };
+            }
         }
 
         // 2. Save to MongoDB

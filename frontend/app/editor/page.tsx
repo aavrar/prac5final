@@ -2,7 +2,7 @@
 
 import { Navigation } from "@/components/navigation"
 import { EditorToolbar } from "@/components/editor-toolbar"
-import { GhostTextEditor } from "@/components/ghost-text-editor"
+import { GhostTextEditor, GhostTextEditorHandle } from "@/components/ghost-text-editor"
 import { EditorSidebar } from "@/components/editor-sidebar"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
@@ -10,9 +10,7 @@ import { PanelRightClose, PanelRightOpen, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useSearchParams } from "next/navigation"
 
-const initialContent = `The morning dew clung to the rose petals like memories—fragile, temporary, beautiful in their impermanence. Sarah walked through the garden, her fingers trailing along the hedge that had grown wild over the summer.
-
-She remembered when these paths had been pristine, when her mother had spent every weekend tending to each flower bed with careful precision. Now, three years after her passing, the garden had found its own rhythm, its own way of being.`
+const initialContent = ""
 
 function EditorContent() {
   const searchParams = useSearchParams()
@@ -20,18 +18,19 @@ function EditorContent() {
 
   const [content, setContent] = useState(initialContent)
   const [showSidebar, setShowSidebar] = useState(true)
-  const [title, setTitle] = useState("Echoes in the Garden")
+  const [title, setTitle] = useState("Untitled")
   const [storyId, setStoryId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const editorRef = useRef<GhostTextEditorHandle>(null)
 
   // Load story if ID is in URL
   useEffect(() => {
     if (urlStoryId) {
       setLoading(true)
-      fetch(`/api/stories?user_id=user_123_quantum`) // Ideally we'd have a get-by-id endpoint, but filtering client-side for prototype
+      fetch(`/api/stories?user_id=user_123_quantum`)
         .then(res => res.json())
         .then(data => {
           const story = data.stories.find((s: any) => s._id === urlStoryId)
@@ -49,17 +48,56 @@ function EditorContent() {
           toast.error("Failed to load story")
         })
         .finally(() => setLoading(false))
+    } else {
+      // Reset to blank if no ID (new story)
+      setContent("")
+      setTitle("Untitled")
+      setStoryId(null)
+      setLastSaved(null)
     }
   }, [urlStoryId])
 
-  const handleFormat = (type: 'bold' | 'italic' | 'quote' | 'list') => {
-    if ((window as any).formatEditorText) {
-      (window as any).formatEditorText(type)
+  useEffect(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      if (content.length > 50) {
+        localStorage.setItem('editor_content', content)
+        saveToDatabase()
+      }
+    }, 30000)
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [content, title])
+
+  const handleFormat = (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => {
+    editorRef.current?.formatText(type)
+  }
+
+  const handleAction = (action: 'save' | 'pdf' | 'txt') => {
+    if (action === 'save') {
+      handleSave()
+    } else if (action === 'pdf') {
+      window.print()
+    } else if (action === 'txt') {
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${title}.txt`
+      a.click()
+      URL.revokeObjectURL(url)
     }
   }
 
   const saveToDatabase = async () => {
-    if (saving) return
+    if (saving || !content) return // Don't save empty content automatically
 
     setSaving(true)
     try {
@@ -95,38 +133,14 @@ function EditorContent() {
   }
 
   const handleSave = () => {
+    if (!content) {
+      toast.error("Cannot save empty story")
+      return
+    }
     localStorage.setItem('editor_content', content)
     localStorage.setItem('editor_title', title)
     saveToDatabase()
   }
-
-  useEffect(() => {
-    if (!urlStoryId) {
-      const savedContent = localStorage.getItem('editor_content')
-      const savedTitle = localStorage.getItem('editor_title')
-      if (savedContent) setContent(savedContent)
-      if (savedTitle) setTitle(savedTitle)
-    }
-  }, [urlStoryId])
-
-  useEffect(() => {
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current)
-    }
-
-    autoSaveTimerRef.current = setTimeout(() => {
-      if (content.length > 50) {
-        localStorage.setItem('editor_content', content)
-        saveToDatabase()
-      }
-    }, 30000)
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-    }
-  }, [content, title])
 
   if (loading) {
     return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
@@ -135,9 +149,9 @@ function EditorContent() {
   return (
     <>
       <Navigation />
-      <div className="h-screen flex flex-col md:pl-32 overflow-hidden">
+      <div className="h-screen flex flex-col md:pl-32 overflow-hidden print:pl-0 print:h-auto print:overflow-visible">
         {/* Header */}
-        <header className="border-b border-border bg-card/50 backdrop-blur-sm p-4 flex-shrink-0">
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm p-4 flex-shrink-0 print:hidden">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex-1 flex items-center gap-3">
               <input
@@ -170,17 +184,17 @@ function EditorContent() {
         </header>
 
         {/* Toolbar */}
-        <div className="flex-shrink-0">
-          <EditorToolbar onFormat={handleFormat} onSave={handleSave} />
+        <div className="flex-shrink-0 print:hidden">
+          <EditorToolbar onFormat={handleFormat} onSave={handleAction} />
         </div>
 
         {/* Editor Layout */}
-        <div className="flex-1 flex overflow-hidden min-h-0 relative">
-          <div className={showSidebar ? "flex-1 overflow-y-auto" : "w-full overflow-y-auto"}>
+        <div className="flex-1 flex overflow-hidden min-h-0 relative print:overflow-visible print:h-auto">
+          <div className={showSidebar ? "flex-1 overflow-y-auto print:overflow-visible" : "w-full overflow-y-auto print:overflow-visible"}>
             <GhostTextEditor
+              ref={editorRef}
               initialContent={content}
               onContentChange={setContent}
-              onFormatRequest={handleFormat}
             />
           </div>
 

@@ -95,3 +95,29 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to update story' }, { status: 500 });
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const storyId = searchParams.get('story_id');
+
+        if (!storyId) {
+            return NextResponse.json({ error: 'story_id is required' }, { status: 400 });
+        }
+
+        const db = await getDatabase();
+        const result = await db.collection('stories').deleteOne({ _id: new ObjectId(storyId) });
+
+        if (result.deletedCount === 0) {
+            return NextResponse.json({ error: 'Story not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Story deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting story:', error);
+        return NextResponse.json({ error: 'Failed to delete story' }, { status: 500 });
+    }
+}

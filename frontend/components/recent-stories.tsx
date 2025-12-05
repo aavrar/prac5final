@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Clock, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 
 interface Story {
   id: string
@@ -38,12 +39,51 @@ const mockStories: Story[] = [
 ]
 
 export function RecentStories() {
+  const [stories, setStories] = useState<Story[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/stories?user_id=user_123_quantum')
+      .then(res => res.json())
+      .then(data => {
+        if (data.stories) {
+          setStories(data.stories.map((s: any) => ({
+            id: s._id,
+            title: s.title,
+            excerpt: s.content.substring(0, 100) + "...",
+            lastEdited: new Date(s.updated_at).toLocaleDateString(),
+            wordCount: s.content.split(/\s+/).length
+          })))
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return <div className="space-y-4"><h2 className="text-lg font-medium text-foreground/80">Recent stories</h2><div className="text-sm text-muted-foreground">Loading stories...</div></div>
+  }
+
+  if (stories.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-lg font-medium text-foreground/80">Recent stories</h2>
+        <div className="p-8 border border-dashed rounded-lg text-center text-muted-foreground">
+          <p>No stories found. Start your first journey.</p>
+          <Button variant="link" asChild className="mt-2">
+            <Link href="/editor">Open Editor</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-medium text-foreground/80">Recent stories</h2>
 
       <div className="grid gap-3">
-        {mockStories.map((story) => (
+        {stories.map((story) => (
           <Card key={story.id} className="p-4 hover:bg-secondary/30 transition-colors group cursor-pointer">
             <Link href={`/editor?story=${story.id}`} className="block">
               <div className="flex items-start justify-between gap-4">

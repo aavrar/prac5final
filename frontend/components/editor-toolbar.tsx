@@ -1,11 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Bold, Italic, List, Quote, Undo, Redo, Save, MoreHorizontal } from "lucide-react"
+import { Bold, Italic, List, Quote, Undo, Redo, Save, MoreHorizontal, FileDown, FileText } from "lucide-react"
 
 interface EditorToolbarProps {
-  onFormat?: (type: 'bold' | 'italic' | 'quote' | 'list') => void
-  onSave?: () => void
+  onFormat?: (type: 'bold' | 'italic' | 'quote' | 'list' | 'undo' | 'redo') => void
+  onSave?: (action: 'save' | 'pdf' | 'txt') => void
 }
 
 export function EditorToolbar({ onFormat, onSave }: EditorToolbarProps) {
@@ -13,10 +13,10 @@ export function EditorToolbar({ onFormat, onSave }: EditorToolbarProps) {
     <div className="border-b border-border bg-card/50 backdrop-blur-sm p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => alert('Undo functionality')}>
+          <Button variant="ghost" size="sm" onClick={() => onFormat?.('undo')}>
             <Undo className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => alert('Redo functionality')}>
+          <Button variant="ghost" size="sm" onClick={() => onFormat?.('redo')}>
             <Redo className="w-4 h-4" />
           </Button>
 
@@ -37,14 +37,17 @@ export function EditorToolbar({ onFormat, onSave }: EditorToolbarProps) {
 
           <div className="w-px h-6 bg-border mx-2" />
 
-          <Button variant="ghost" size="sm" onClick={() => alert('More formatting options coming soon!')}>
-            <MoreHorizontal className="w-4 h-4" />
+          <Button variant="ghost" size="sm" onClick={() => onSave?.('pdf')} title="Export as PDF">
+            <FileDown className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onSave?.('txt')} title="Export as Text">
+            <FileText className="w-4 h-4" />
           </Button>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Auto-saved</span>
-          <Button variant="ghost" size="sm" className="gap-2" onClick={onSave}>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={() => onSave?.('save')}>
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">Save</span>
           </Button>
