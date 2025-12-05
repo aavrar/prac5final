@@ -1,60 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/mongodb';
-import { UserTensor } from '@/lib/types';
+import { getUserTensor, updateUserTensor, initializeUserTensor } from '@/lib/db/tensor';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('user_id');
+
+    if (!userId) {
+        return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
     try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('user_id');
-
-        if (!userId) {
-            return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
-        }
-
-        const db = await getDatabase();
-        const tensor = await db.collection('tensors').findOne({ user_id: userId });
-
-        if (!tensor) {
-            return NextResponse.json({ error: 'Tensor not found' }, { status: 404 });
-        }
-
-        return NextResponse.json({ tensor });
+        // Ensure it exists, initialize if not
+        const tensor = await initializeUserTensor(userId);
+        return NextResponse.json(tensor);
     } catch (error) {
-        console.error('Error loading tensor:', error);
-        return NextResponse.json({ error: 'Failed to load tensor' }, { status: 500 });
+        console.error('Error fetching tensor:', error);
+        return NextResponse.json({ error: 'Failed to fetch tensor' }, { status: 500 });
     }
 }
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
     try {
-        const tensor: UserTensor = await request.json();
+        const { user_id, updates } = await request.json();
 
-        if (!tensor.user_id) {
-            return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
+        if (!user_id || !updates) {
+            return NextResponse.json({ error: 'User ID and updates are required' }, { status: 400 });
         }
 
-        const db = await getDatabase();
-
-        const result = await db.collection('tensors').updateOne(
-            { user_id: tensor.user_id },
-            {
-                $set: {
-                    ...tensor,
-                    timestamp: new Date().toISOString()
-                }
-            },
-            { upsert: true }
-        );
-
-        return NextResponse.json({
-            success: true,
-            message: 'Tensor saved successfully',
-            upserted: result.upsertedCount > 0
-        });
+        const updatedTensor = await updateUserTensor(user_id, updates);
+        return NextResponse.json(updatedTensor);
     } catch (error) {
-        console.error('Error saving tensor:', error);
-        return NextResponse.json({ error: 'Failed to save tensor' }, { status: 500 });
+        console.error('Error updating tensor:', error);
+        return NextResponse.json({ error: 'Failed to update tensor' }, { status: 500 });
     }
 }
