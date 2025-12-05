@@ -5,11 +5,30 @@ import { CalibrationChat } from "@/components/calibration/CalibrationChat"
 import { UserTensor } from "@/lib/types"
 import { Loader2, BookOpen, Heart, Activity, Brain } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-
 import { Navigation } from "@/components/navigation"
 
 export default function CalibrationPage() {
-    // ... (state and effects)
+    const [tensor, setTensor] = useState<UserTensor | null>(null)
+    const [loading, setLoading] = useState(true)
+    const userId = "user_123_quantum" // Hardcoded for prototype
+
+    const fetchTensor = async () => {
+        try {
+            const res = await fetch(`/api/tensor?user_id=${userId}`)
+            const data = await res.json()
+            if (data && !data.error) {
+                setTensor(data)
+            }
+        } catch (error) {
+            console.error("Failed to fetch tensor", error)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchTensor()
+    }, [])
 
     if (loading) {
         return (
@@ -132,5 +151,6 @@ export default function CalibrationPage() {
                     </div>
                 </div>
             </main>
-            )
+        </>
+    )
 }
