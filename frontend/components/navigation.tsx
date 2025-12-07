@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, MessageSquare, Edit, Sparkles, Eye, Brain, Wand2, Users } from "lucide-react"
+import { Home, MessageSquare, Edit, Sparkles, Eye, Brain, Wand2, Users, Ghost } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,7 @@ const navItems = [
   { href: "/archive", icon: Sparkles, label: "Archive" },
   { href: "/mirror", icon: Wand2, label: "Mirror" },
   { href: "/chorus", icon: Users, label: "Chorus" },
+  { href: "/antimatter", icon: Ghost, label: "Antimatter" },
   { href: "/calibration", icon: Brain, label: "Calibration" },
 ]
 
